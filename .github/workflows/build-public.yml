@@ -288,8 +288,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: "v${{ env.version }}"
           name: "v${{ env.version }}"
-          body: ""
-          draft: true
+          body: "Automated release from ArchNet build"
+          draft: false
           files: |
             archnet-linux.zip
             archnet-windows.zip
