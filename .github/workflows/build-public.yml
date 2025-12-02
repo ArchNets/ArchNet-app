@@ -6,7 +6,7 @@
 #   - KEYSTORE_JKS_PROD: Base64 encoded keystore for Android signing
 #   - KEY_PROPERTIES_PROD: Base64 encoded key properties for Android signing
 
-name: Build ArchNet (from Private Repo)
+name: Build ArchNet App
 
 on:
   workflow_dispatch:
