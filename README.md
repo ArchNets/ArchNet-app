@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../assets/icon/icon.png" width="128" height="128" alt="ArchNet Logo"/>
+  <img src="../assets/icon.png" width="128" height="128" alt="ArchNet Logo"/>
 </p>
 
 <h1 align="center">ArchNet</h1>
