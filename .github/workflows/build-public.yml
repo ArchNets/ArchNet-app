@@ -1,0 +1,303 @@
+# This workflow is designed to be used in the PUBLIC repository: ArchNets/ArchNet-app
+# It clones and builds the private repository: EbadiDev/archnet-application
+#
+# Required Secrets in the PUBLIC repo (ArchNets/ArchNet-app):
+#   - PRIVATE_REPO_TOKEN: A GitHub PAT with 'repo' scope to access the private repo
+#   - KEYSTORE_JKS_PROD: Base64 encoded keystore for Android signing
+#   - KEY_PROPERTIES_PROD: Base64 encoded key properties for Android signing
+
+name: Build ArchNet (from Private Repo)
+
+on:
+  workflow_dispatch:
+  # Uncomment below to enable scheduled builds
+  # schedule:
+  #   - cron: '0 0 * * *'  # Daily at midnight UTC
+
+jobs:
+  # Build for Linux
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          repository: EbadiDev/archnet-application
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          submodules: "recursive"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.35.3
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: bash scripts/prepare.sh linux
+        run: bash scripts/prepare.sh linux
+
+      - name: Build Linux
+        run: flutter build linux
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archnet-linux
+          path: build/linux/x64/release/bundle
+
+  # Build for Windows
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          repository: EbadiDev/archnet-application
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          submodules: "recursive"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.35.3
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: bash scripts/prepare.sh windows
+        run: bash scripts/prepare.sh windows
+
+      - name: Build Windows
+        run: flutter build windows
+
+      - name: Download and Install Inno Setup
+        run: |
+          Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "is.exe"
+          Start-Process -FilePath "is.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" -Wait
+          echo "C:\\Program Files (x86)\\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Compile Installer
+        run: |
+          ISCC.exe scripts/windows/setup.iss
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archnet-windows
+          path: build/windows/x64/runner/Release
+
+      - name: Upload Windows setup artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archnet-windows-setup
+          path: scripts/windows/Output/mysetup.exe
+
+  # Build for macOS
+  macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          repository: EbadiDev/archnet-application
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          submodules: "recursive"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.35.3
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: bash scripts/prepare.sh macos
+        run: bash scripts/prepare.sh macos
+
+      - name: Build macOS
+        run: flutter build macos
+
+      - name: Create DMG with Applications shortcut
+        run: |
+          mkdir -p dmg-temp
+          cp -R build/macos/Build/Products/Release/ArchNet.app dmg-temp/
+          ln -s /Applications dmg-temp/Applications
+          hdiutil create -volname "Arch Net" \
+            -srcfolder dmg-temp \
+            -ov -format UDZO \
+            build/macos/Build/Products/Release/archnet-macos.dmg
+          rm -rf dmg-temp
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archnet-macos
+          path: build/macos/Build/Products/Release/archnet-macos.dmg
+
+  # Build for Android
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          repository: EbadiDev/archnet-application
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          submodules: "recursive"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.35.3
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          cache-dependency-path: |
+            third_party/libunifiedcore/go.sum
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: bash scripts/prepare.sh android
+        run: bash scripts/prepare.sh android
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: Decode android/app/keystore.jks
+        run: echo "${{ secrets.KEYSTORE_JKS_PROD }}" | base64 --decode > android/app/keystore.jks
+
+      - name: Decode android/key.properties
+        run: echo "${{ secrets.KEY_PROPERTIES_PROD }}" | base64 --decode > android/key.properties
+
+      - uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27
+          link-to-sdk: true
+
+      - name: Build Android APK apilatest
+        run: flutter build apk --release --split-per-abi --flavor apilatest
+
+      - name: Build Android APK api28
+        run: flutter build apk --release --split-per-abi --flavor api28
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: archnet-android
+          path: build/app/outputs/flutter-apk
+
+  # Release Job
+  release:
+    runs-on: ubuntu-latest
+    needs: [linux, windows, macos, android]
+    steps:
+      - name: Checkout private repository (for version info)
+        uses: actions/checkout@v4
+        with:
+          repository: EbadiDev/archnet-application
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+
+      - name: Extract version from pubspec.yaml
+        id: get_version
+        run: |
+          version=$(grep '^version:' pubspec.yaml | awk '{print $2}')
+          echo "version=${version}" >> $GITHUB_ENV
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: archnet-linux
+          path: archnet-linux
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: archnet-windows
+          path: archnet-windows
+
+      - name: Download Windows setup artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: archnet-windows-setup
+          path: archnet-windows-setup
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: archnet-macos
+          path: archnet-macos
+
+      - name: Download Android APK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: archnet-android
+          path: archnet-android
+
+      - run: ls -R
+
+      - name: zip linux
+        run: zip -r archnet-linux.zip archnet-linux
+
+      - name: zip windows
+        run: zip -r archnet-windows.zip archnet-windows
+
+      - name: Rename for release
+        run: |
+          mv archnet-windows-setup/mysetup.exe archnet-windows-setup/archnet-windows-setup.exe
+          mv archnet-android/app-armeabi-v7a-api28-release.apk archnet-android/archnet-android-api28-armeabi-v7a.apk
+          mv archnet-android/app-arm64-v8a-api28-release.apk archnet-android/archnet-android-api28-arm64-v8a.apk
+          mv archnet-android/app-x86_64-api28-release.apk archnet-android/archnet-android-api28-x86_64.apk
+          mv archnet-android/app-armeabi-v7a-apilatest-release.apk archnet-android/archnet-android-apilatest-armeabi-v7a.apk
+          mv archnet-android/app-arm64-v8a-apilatest-release.apk archnet-android/archnet-android-apilatest-arm64-v8a.apk
+          mv archnet-android/app-x86_64-apilatest-release.apk archnet-android/archnet-android-apilatest-x86_64.apk
+
+      - name: Create GitHub Release and Upload All Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: "v${{ env.version }}"
+          name: "v${{ env.version }}"
+          body: ""
+          draft: true
+          files: |
+            archnet-linux.zip
+            archnet-windows.zip
+            archnet-windows-setup/archnet-windows-setup.exe
+            archnet-macos/archnet-macos.dmg
+            archnet-android/archnet-android-api28-armeabi-v7a.apk
+            archnet-android/archnet-android-api28-arm64-v8a.apk
+            archnet-android/archnet-android-api28-x86_64.apk
+            archnet-android/archnet-android-apilatest-armeabi-v7a.apk
+            archnet-android/archnet-android-apilatest-arm64-v8a.apk
+            archnet-android/archnet-android-apilatest-x86_64.apk
