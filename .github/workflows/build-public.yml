@@ -204,7 +204,6 @@ jobs:
       - name: Free up disk space
         run: |
           sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android/sdk/ndk
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force
@@ -230,6 +229,12 @@ jobs:
           ls -la third_party/libunifiedcore/ || echo "libunifiedcore not found!"
           echo "=== All third_party directories ==="
           ls -la third_party/
+
+      - uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27
+          link-to-sdk: true
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -277,12 +282,6 @@ jobs:
 
       - name: Decode android/key.properties
         run: echo "${{ secrets.KEY_PROPERTIES_PROD }}" | base64 --decode > android/key.properties
-
-      - uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: r27
-          link-to-sdk: true
 
       - name: Build Android APK apilatest
         run: flutter build apk --release --split-per-abi --flavor apilatest
