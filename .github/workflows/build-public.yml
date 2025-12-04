@@ -100,7 +100,14 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install mingw-w64 for CGO cross-compilation
-        run: choco install mingw -y
+        run: |
+          choco install mingw -y
+          # Add mingw to PATH for this job
+          echo "C:\ProgramData\mingw64\mingw64\bin" >> $env:GITHUB_PATH
+
+      - name: Verify GCC installation
+        run: |
+          gcc --version
 
       - name: bash scripts/prepare.sh windows
         run: bash scripts/prepare.sh windows
