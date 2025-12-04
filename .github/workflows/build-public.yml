@@ -40,6 +40,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          cache-dependency-path: |
+            third_party/libcore/go.sum
+
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
@@ -82,10 +88,19 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          cache-dependency-path: |
+            third_party/libcore/go.sum
+
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install mingw-w64 for CGO cross-compilation
+        run: choco install mingw -y
 
       - name: bash scripts/prepare.sh windows
         run: bash scripts/prepare.sh windows
@@ -169,6 +184,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          cache-dependency-path: |
+            third_party/libcore/go.sum
+
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
@@ -225,8 +246,8 @@ jobs:
         run: |
           echo "=== Checking submodules ==="
           git submodule status
-          echo "=== libunifiedcore directory ==="
-          ls -la third_party/libunifiedcore/ || echo "libunifiedcore not found!"
+          echo "=== libcore directory ==="
+          ls -la third_party/libcore/ || echo "libcore not found!"
           echo "=== All third_party directories ==="
           ls -la third_party/
 
@@ -249,7 +270,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           cache-dependency-path: |
-            third_party/libunifiedcore/go.sum
+            third_party/libcore/go.sum
 
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
@@ -259,15 +280,15 @@ jobs:
       - name: bash scripts/prepare.sh android
         run: bash scripts/prepare.sh android
 
-      - name: Verify libunifiedcore.aar was built
+      - name: Verify libcore.aar was built
         run: |
-          echo "=== Checking for libunifiedcore.aar ==="
+          echo "=== Checking for libcore.aar ==="
           ls -la android/app/libs/ || echo "libs directory not found!"
-          if [ -f "android/app/libs/libunifiedcore.aar" ]; then
-            echo "✅ libunifiedcore.aar exists!"
-            ls -lh android/app/libs/libunifiedcore.aar
+          if [ -f "android/app/libs/libcore.aar" ]; then
+            echo "✅ libcore.aar exists!"
+            ls -lh android/app/libs/libcore.aar
           else
-            echo "❌ libunifiedcore.aar NOT FOUND!"
+            echo "❌ libcore.aar NOT FOUND!"
             exit 1
           fi
 
