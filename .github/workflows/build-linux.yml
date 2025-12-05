@@ -1,0 +1,53 @@
+# Build Linux only - artifacts available for download
+name: Build Linux
+
+on:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure git for private submodules
+        run: |
+          git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          repository: EbadiDev/archnet-application
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          submodules: "recursive"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.35.3
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: bash scripts/prepare.sh linux
+        run: bash scripts/prepare.sh linux
+
+      - name: Build Linux
+        run: flutter build linux
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archnet-linux
+          path: build/linux/x64/release/bundle

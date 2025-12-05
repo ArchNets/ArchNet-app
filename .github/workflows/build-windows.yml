@@ -1,0 +1,103 @@
+# Build Windows only - artifacts available for download
+name: Build Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Configure git for private submodules
+        run: |
+          git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          repository: EbadiDev/archnet-application
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          submodules: "recursive"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.35.3
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install mingw-w64 for CGO cross-compilation
+        run: |
+          choco install mingw -y
+          echo "C:\ProgramData\mingw64\mingw64\bin" >> $env:GITHUB_PATH
+
+      - name: Verify GCC installation
+        run: gcc --version
+
+      - name: bash scripts/prepare.sh windows
+        run: bash scripts/prepare.sh windows
+
+      - name: Build Windows
+        run: flutter build windows
+
+      - name: Download and Install Inno Setup
+        run: |
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
+          
+          while (-not $success -and $retryCount -lt $maxRetries) {
+            try {
+              $retryCount++
+              Write-Host "Attempt $retryCount of $maxRetries..."
+              Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "is.exe" -TimeoutSec 120
+              $success = $true
+            } catch {
+              Write-Host "Primary URL failed, trying mirror..."
+              try {
+                Invoke-WebRequest -Uri "https://github.com/jrsoftware/issrc/releases/download/is-6.3.3/innosetup-6.3.3.exe" -OutFile "is.exe" -TimeoutSec 120
+                $success = $true
+              } catch {
+                Write-Host "Attempt $retryCount failed: $_"
+                if ($retryCount -lt $maxRetries) {
+                  Start-Sleep -Seconds 10
+                }
+              }
+            }
+          }
+          
+          if (-not $success) {
+            throw "Failed to download Inno Setup after $maxRetries attempts"
+          }
+          
+          Start-Process -FilePath "is.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" -Wait
+          echo "C:\\Program Files (x86)\\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Compile Installer
+        run: ISCC.exe scripts/windows/setup.iss
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archnet-windows
+          path: build/windows/x64/runner/Release
+
+      - name: Upload Windows setup artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archnet-windows-setup
+          path: scripts/windows/Output/mysetup.exe

@@ -1,0 +1,103 @@
+# Build Android only - artifacts available for download
+name: Build Android
+
+on:
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          df -h
+
+      - name: Configure git for private submodules
+        run: |
+          git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          repository: EbadiDev/archnet-application
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          submodules: "recursive"
+
+      - name: Verify submodules
+        run: |
+          echo "=== Checking submodules ==="
+          git submodule status
+          echo "=== libcore directory ==="
+          ls -la third_party/libcore/ || echo "libcore not found!"
+          echo "=== All third_party directories ==="
+          ls -la third_party/
+
+      - uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27
+          link-to-sdk: true
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.35.3
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: bash scripts/prepare.sh android
+        run: bash scripts/prepare.sh android
+
+      - name: Verify libcore.aar was built
+        run: |
+          echo "=== Checking for libcore.aar ==="
+          ls -la android/app/libs/ || echo "libs directory not found!"
+          if [ -f "android/app/libs/libcore.aar" ]; then
+            echo "✅ libcore.aar exists!"
+            ls -lh android/app/libs/libcore.aar
+          else
+            echo "❌ libcore.aar NOT FOUND!"
+            exit 1
+          fi
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: Decode android/app/keystore.jks
+        run: echo "${{ secrets.KEYSTORE_JKS_PROD }}" | base64 --decode > android/app/keystore.jks
+
+      - name: Decode android/key.properties
+        run: echo "${{ secrets.KEY_PROPERTIES_PROD }}" | base64 --decode > android/key.properties
+
+      - name: Build Android APK apilatest
+        run: flutter build apk --release --split-per-abi --flavor apilatest
+
+      - name: Build Android APK api28
+        run: flutter build apk --release --split-per-abi --flavor api28
+
+      - name: Upload Android APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archnet-android
+          path: build/app/outputs/flutter-apk
