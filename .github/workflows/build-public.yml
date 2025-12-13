@@ -37,6 +37,9 @@ jobs:
           channel: stable
           flutter-version: 3.35.3
 
+      - name: Create .env file
+        run: echo "DEVICE_SECRET=${{ secrets.DEVICE_SECRET }}" > .env
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -84,6 +87,9 @@ jobs:
         with:
           channel: stable
           flutter-version: 3.35.3
+
+      - name: Create .env file
+        run: echo "DEVICE_SECRET=${{ secrets.DEVICE_SECRET }}" > .env
 
       - name: Install dependencies
         run: flutter pub get
@@ -188,6 +194,9 @@ jobs:
           channel: stable
           flutter-version: 3.35.3
 
+      - name: Create .env file
+        run: echo "DEVICE_SECRET=${{ secrets.DEVICE_SECRET }}" > .env
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -269,6 +278,9 @@ jobs:
         with:
           channel: stable
           flutter-version: 3.35.3
+
+      - name: Create .env file
+        run: echo "DEVICE_SECRET=${{ secrets.DEVICE_SECRET }}" > .env
 
       - name: Install dependencies
         run: flutter pub get
