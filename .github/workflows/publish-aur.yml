@@ -13,19 +13,30 @@ jobs:
       - name: Checkout public repository
         uses: actions/checkout@v4
       
-      - name: Extract version from tag
+      - name: Extract version from tag or use existing
         id: get_version
         run: |
-          # Extract version from tag (assumes tags like v0.9.20)
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Publishing version: ${VERSION}"
+          # Extract version from tag (if triggered by release)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "update_version=true" >> $GITHUB_OUTPUT
+            echo "Publishing version from tag: ${VERSION}"
+          else
+            # Manual trigger - use existing version from PKGBUILD
+            VERSION=$(grep '^pkgver=' aur/PKGBUILD | cut -d'=' -f2)
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "update_version=false" >> $GITHUB_OUTPUT
+            echo "Using existing version from PKGBUILD: ${VERSION}"
+          fi
       
       - name: Update PKGBUILD version
+        if: steps.get_version.outputs.update_version == 'true'
         run: |
           cd aur
           sed -i "s|^pkgver=.*|pkgver=${{ steps.get_version.outputs.version }}|" PKGBUILD
           sed -i "s|^pkgrel=.*|pkgrel=1|" PKGBUILD
+          echo "Updated PKGBUILD to version ${{ steps.get_version.outputs.version }}"
           cat PKGBUILD
       
       - name: Publish to AUR
