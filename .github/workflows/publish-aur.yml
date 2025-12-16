@@ -18,16 +18,22 @@ jobs:
         run: |
           # Extract version from tag (if triggered by release)
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/v}"
+            FULL_VERSION="${GITHUB_REF#refs/tags/v}"
+            # Split version+build (e.g., "0.9.20+1" -> version="0.9.20" build="1")
+            VERSION="${FULL_VERSION%+*}"
+            BUILD="${FULL_VERSION#*+}"
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "pkgrel=${BUILD}" >> $GITHUB_OUTPUT
             echo "update_version=true" >> $GITHUB_OUTPUT
-            echo "Publishing version from tag: ${VERSION}"
+            echo "Publishing version from tag: ${VERSION} (build ${BUILD})"
           else
             # Manual trigger - use existing version from PKGBUILD
             VERSION=$(grep '^pkgver=' aur/PKGBUILD | cut -d'=' -f2)
+            PKGREL=$(grep '^pkgrel=' aur/PKGBUILD | cut -d'=' -f2)
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "pkgrel=${PKGREL}" >> $GITHUB_OUTPUT
             echo "update_version=false" >> $GITHUB_OUTPUT
-            echo "Using existing version from PKGBUILD: ${VERSION}"
+            echo "Using existing version from PKGBUILD: ${VERSION}-${PKGREL}"
           fi
       
       - name: Update PKGBUILD version
@@ -35,8 +41,8 @@ jobs:
         run: |
           cd aur
           sed -i "s|^pkgver=.*|pkgver=${{ steps.get_version.outputs.version }}|" PKGBUILD
-          sed -i "s|^pkgrel=.*|pkgrel=1|" PKGBUILD
-          echo "Updated PKGBUILD to version ${{ steps.get_version.outputs.version }}"
+          sed -i "s|^pkgrel=.*|pkgrel=${{ steps.get_version.outputs.pkgrel }}|" PKGBUILD
+          echo "Updated PKGBUILD to version ${{ steps.get_version.outputs.version }}-${{ steps.get_version.outputs.pkgrel }}"
           cat PKGBUILD
       
       - name: Publish to AUR
