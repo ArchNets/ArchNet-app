@@ -24,8 +24,8 @@ jobs:
       - name: Update PKGBUILD version
         run: |
           cd aur
-          sed -i "s/^pkgver=.*/pkgver=${{ steps.get_version.outputs.version }}/" PKGBUILD
-          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s|^pkgver=.*|pkgver=${{ steps.get_version.outputs.version }}|" PKGBUILD
+          sed -i "s|^pkgrel=.*|pkgrel=1|" PKGBUILD
           cat PKGBUILD
       
       - name: Publish to AUR
