@@ -13,7 +13,7 @@ optdepends=(
 provides=('archnet')
 conflicts=('archnet')
 source=(
-    "${pkgname}-${pkgver}.zip::https://github.com/ArchNets/ArchNet-app/releases/download/v${pkgver}/archnet-linux.zip"
+    "${pkgname}-${pkgver}.zip::https://github.com/ArchNets/ArchNet-app/releases/download/v${pkgver}+${pkgrel}/archnet-linux.zip"
     "archnet.desktop"
     "archnet.sh"
 )
