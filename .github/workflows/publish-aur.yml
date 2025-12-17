@@ -3,16 +3,15 @@ name: Publish to AUR
 on:
   release:
     types: [published]
-  workflow_dispatch:  # Allow manual trigger for testing
-
+  workflow_dispatch: # Allow manual trigger for testing
 jobs:
   publish-aur:
-    runs-on: ubuntu-latest
-    
+    runs-on: tenki-standard-autoscale
+
     steps:
       - name: Checkout public repository
         uses: actions/checkout@v4
-      
+
       - name: Extract version from tag or use existing
         id: get_version
         run: |
@@ -35,7 +34,8 @@ jobs:
             echo "update_version=false" >> $GITHUB_OUTPUT
             echo "Using existing version from PKGBUILD: ${VERSION}-${PKGREL}"
           fi
-      
+
+
       - name: Update PKGBUILD version
         if: steps.get_version.outputs.update_version == 'true'
         run: |
@@ -44,7 +44,8 @@ jobs:
           sed -i "s|^pkgrel=.*|pkgrel=${{ steps.get_version.outputs.pkgrel }}|" PKGBUILD
           echo "Updated PKGBUILD to version ${{ steps.get_version.outputs.version }}-${{ steps.get_version.outputs.pkgrel }}"
           cat PKGBUILD
-      
+
+
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v2.7.2
         with:

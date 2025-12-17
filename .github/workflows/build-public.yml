@@ -17,7 +17,7 @@ on:
 jobs:
   # Build for Linux
   linux:
-    runs-on: ubuntu-latest
+    runs-on: tenki-standard-autoscale
     steps:
       - name: Configure git for private submodules
         run: |
@@ -65,7 +65,7 @@ jobs:
 
   # Build for Windows
   windows:
-    runs-on: windows-latest
+    runs-on: tenki-standard-autoscale
     steps:
       - name: Configure git for private submodules
         run: |
@@ -168,7 +168,7 @@ jobs:
 
   # Build for macOS
   macos:
-    runs-on: macos-latest
+    runs-on: tenki-standard-autoscale
     steps:
       - name: Configure git for private submodules
         run: |
@@ -227,7 +227,7 @@ jobs:
 
   # Build for Android
   android:
-    runs-on: ubuntu-latest
+    runs-on: tenki-standard-autoscale
     steps:
       - name: Free up disk space
         run: |
@@ -325,7 +325,7 @@ jobs:
 
   # Release Job
   release:
-    runs-on: ubuntu-latest
+    runs-on: tenki-standard-autoscale
     needs: [linux, windows, macos, android]
     steps:
       - name: Checkout private repository (for version info)

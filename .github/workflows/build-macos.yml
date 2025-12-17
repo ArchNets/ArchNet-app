@@ -3,10 +3,9 @@ name: Build macOS
 
 on:
   workflow_dispatch:
-
 jobs:
   macos:
-    runs-on: macos-latest
+    runs-on: tenki-standard-autoscale
     steps:
       - name: Configure git for private submodules
         run: |
