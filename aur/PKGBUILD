@@ -47,4 +47,8 @@ package() {
     
     # Set executable permissions
     chmod +x "${pkgdir}/opt/archnet/archnet"
+    
+    # Set executable permissions for bundled binaries
+    chmod +x "${pkgdir}/opt/archnet/lib/sing-box" 2>/dev/null || true
+    chmod +x "${pkgdir}/opt/archnet/lib/libv2raycore.so" 2>/dev/null || true
 }
