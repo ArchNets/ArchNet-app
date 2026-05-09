@@ -50,7 +50,7 @@ jobs:
           flutter-version: 3.41.7
 
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       - name: Set up Go
         uses: actions/setup-go@v5
