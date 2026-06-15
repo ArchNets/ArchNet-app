@@ -113,6 +113,8 @@ jobs:
         run: bash scripts/prepare.sh windows
 
       - name: Build Windows
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
         run: flutter build windows
 
       - name: Download and Install Inno Setup
