@@ -3,10 +3,9 @@ name: Build Windows
 
 on:
   workflow_dispatch:
-
 jobs:
   windows:
-    runs-on: windows-latest
+    runs-on: tenki-standard-autoscale
     steps:
       - name: Configure git for private submodules
         run: |
