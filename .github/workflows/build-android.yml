@@ -37,6 +37,21 @@ jobs:
           echo "=== All third_party directories ==="
           ls -la third_party/
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Add GOPATH/bin to PATH
+        run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
       - uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
@@ -52,18 +67,20 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 'stable'
-          cache: false
-
       - name: Install Protoc
         uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Decode android/app/keystore.jks
+        run: echo "${{ secrets.KEYSTORE_JKS_PROD }}" | base64 --decode > android/app/keystore.jks
+
+      - name: Decode android/key.properties
+        run: echo "${{ secrets.KEY_PROPERTIES_PROD }}" | base64 --decode > android/key.properties
+
       - name: bash scripts/prepare.sh android
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: bash scripts/prepare.sh android
 
       - name: Verify libcore.aar was built
@@ -77,18 +94,6 @@ jobs:
             echo "❌ libcore.aar NOT FOUND!"
             exit 1
           fi
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: zulu
-          java-version: 17
-
-      - name: Decode android/app/keystore.jks
-        run: echo "${{ secrets.KEYSTORE_JKS_PROD }}" | base64 --decode > android/app/keystore.jks
-
-      - name: Decode android/key.properties
-        run: echo "${{ secrets.KEY_PROPERTIES_PROD }}" | base64 --decode > android/key.properties
 
       - name: Build Android APK apilatest
         run: flutter build apk --release --split-per-abi --flavor apilatest

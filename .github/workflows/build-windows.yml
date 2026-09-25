@@ -54,41 +54,14 @@ jobs:
       - name: Build Windows
         run: flutter build windows
 
-      - name: Download and Install Inno Setup
-        run: |
-          $maxRetries = 3
-          $retryCount = 0
-          $success = $false
-          
-          while (-not $success -and $retryCount -lt $maxRetries) {
-            try {
-              $retryCount++
-              Write-Host "Attempt $retryCount of $maxRetries..."
-              Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "is.exe" -TimeoutSec 120
-              $success = $true
-            } catch {
-              Write-Host "Primary URL failed, trying mirror..."
-              try {
-                Invoke-WebRequest -Uri "https://github.com/jrsoftware/issrc/releases/download/is-6.3.3/innosetup-6.3.3.exe" -OutFile "is.exe" -TimeoutSec 120
-                $success = $true
-              } catch {
-                Write-Host "Attempt $retryCount failed: $_"
-                if ($retryCount -lt $maxRetries) {
-                  Start-Sleep -Seconds 10
-                }
-              }
-            }
-          }
-          
-          if (-not $success) {
-            throw "Failed to download Inno Setup after $maxRetries attempts"
-          }
-          
-          Start-Process -FilePath "is.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" -Wait
-          echo "C:\\Program Files (x86)\\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install Inno Setup
+        run: choco install innosetup -y
 
       - name: Compile Installer
-        run: ISCC.exe scripts/windows/setup.iss
+        run: |
+          echo "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" scripts/windows/setup.iss
+
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
