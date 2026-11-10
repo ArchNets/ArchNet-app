@@ -288,9 +288,13 @@ jobs:
           fi
 
       - name: Build Android APK apilatest
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: flutter build apk --release --split-per-abi --flavor apilatest
 
       - name: Build Android APK api28
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: flutter build apk --release --split-per-abi --flavor api28
 
       - name: Upload Android APK
